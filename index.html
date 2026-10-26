@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mô Phỏng Hố Đen & Giải Phẫu Không-Thời Gian | Black Hole Explorer</title>
+  <link rel="stylesheet" href="/src/style.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='black' stroke='%23ff9d00' stroke-width='6'/></svg>" />
+</head>
+<body class="relative w-screen h-screen overflow-hidden bg-black text-white">
+  <!-- 3D WebGL Canvas -->
+  <canvas id="webgl-canvas" class="absolute inset-0 w-full h-full z-0 block"></canvas>
+
+  <!-- Hotspots Overlay Layer -->
+  <div id="hotspots-layer" class="absolute inset-0 pointer-events-none z-10 overflow-hidden"></div>
+
+  <!-- HUD Control Deck & UI Overlays -->
+  <div id="hud-overlay" class="absolute inset-0 pointer-events-none z-20 flex flex-col justify-between p-4 md:p-6">
+    <!-- Header / Top Bar -->
+    <header class="flex items-center justify-between pointer-events-auto">
+      <div class="glass-panel px-4 py-2.5 rounded-xl flex items-center space-x-3">
+        <div class="w-3 h-3 rounded-full bg-cosmic-cyan animate-pulse shadow-[0_0_10px_#00f0ff]"></div>
+        <div>
+          <h1 class="text-sm md:text-base font-bold tracking-wider uppercase text-cyan-300">Gargantua Black Hole</h1>
+          <p class="text-[10px] md:text-xs text-slate-400 font-mono">Thấu kính hấp dẫn & Giải phẫu Không-Thời gian</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <!-- Mode Switcher -->
+        <div class="glass-panel p-1 rounded-xl flex items-center space-x-1">
+          <button id="mode-anatomy-btn" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-cyan-500/30 text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]">
+            Giải Phẫu (Anatomy)
+          </button>
+          <button id="mode-genesis-btn" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all">
+            Khởi Sinh (Genesis)
+          </button>
+        </div>
+
+        <!-- Audio Toggle -->
+        <button id="audio-toggle-btn" class="glass-panel p-2.5 rounded-xl text-slate-300 hover:text-cyan-300 transition-colors" title="Bật/Tắt âm thanh vũ trụ">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Side Panels (Info Card & Controls) will be dynamically injected / toggled -->
+    <div id="side-container" class="flex justify-between items-start my-auto pointer-events-none">
+      <!-- Left Controls Panel -->
+      <div id="controls-panel" class="pointer-events-auto"></div>
+
+      <!-- Right Info Card -->
+      <div id="infocard-container" class="pointer-events-auto"></div>
+    </div>
+
+    <!-- Bottom Bar (Timeline or Status Bar) -->
+    <footer id="bottom-bar" class="pointer-events-auto w-full max-w-4xl mx-auto">
+      <div id="timeline-container"></div>
+    </footer>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
