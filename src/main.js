@@ -4,6 +4,8 @@ import { SceneManager } from './core/SceneManager.js';
 import { CosmicAudioController } from './utils/cosmicAudio.js';
 import { BlackHole } from './objects/BlackHole.js';
 import { StarCollapse } from './objects/StarCollapse.js';
+import { PolarJets } from './objects/PolarJets.js';
+import { Starfield } from './objects/Starfield.js';
 
 // Global instances
 const stateManager = new StateManager();
@@ -13,8 +15,14 @@ const canvas = document.getElementById('webgl-canvas');
 const sceneManager = new SceneManager(canvas);
 
 // Instantiate 3D Entities
+const starfield = new Starfield();
+sceneManager.scene.add(starfield.group);
+
 const blackHole = new BlackHole(sceneManager.camera);
 sceneManager.scene.add(blackHole.mesh);
+
+const polarJets = new PolarJets();
+sceneManager.scene.add(polarJets.group);
 
 const starCollapse = new StarCollapse(sceneManager.scene, audioController);
 
@@ -22,7 +30,9 @@ const starCollapse = new StarCollapse(sceneManager.scene, audioController);
 sceneManager.addUpdatable({
   update: (time, delta) => {
     const state = stateManager.getState();
+    starfield.update(time);
     blackHole.update(time, state);
+    polarJets.update(time, state);
     starCollapse.update(time, state);
   }
 });
@@ -33,7 +43,9 @@ window.__APP = {
   sceneManager,
   audioController,
   blackHole,
-  starCollapse
+  polarJets,
+  starCollapse,
+  starfield
 };
 
 console.log("Black Hole simulation initialized with custom raymarching shader.");
