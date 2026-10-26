@@ -5,25 +5,21 @@
 @layer base {
   body {
     @apply bg-black text-slate-100 overflow-hidden select-none;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: 'Cinzel', serif;
   }
 }
 
-/* Glassmorphism Sci-Fi Panels */
-.glass-panel {
-  background: rgba(8, 12, 28, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 240, 255, 0.2);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(0, 240, 255, 0.05);
-}
-
-.glass-panel-amber {
-  background: rgba(24, 12, 8, 0.8);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 157, 0, 0.25);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(255, 157, 0, 0.05);
+/* Luxury Ethereal Glassmorphism */
+.glass-panel-luxury {
+  background: rgba(6, 8, 18, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 184, 108, 0.22);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.75), inset 0 0 16px rgba(255, 184, 108, 0.04);
 }
 
 /* Custom Scrollbar */
@@ -31,28 +27,19 @@
   width: 4px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.4);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 240, 255, 0.3);
+  background: rgba(255, 184, 108, 0.35);
   border-radius: 2px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 240, 255, 0.6);
+
+/* Subtle fade in keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Pulsing radar ring */
-@keyframes radar-pulse {
-  0% {
-    transform: scale(0.6);
-    opacity: 0.9;
-  }
-  100% {
-    transform: scale(2.4);
-    opacity: 0;
-  }
-}
-
-.radar-ring {
-  animation: radar-pulse 2s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
+.animate-fade-in {
+  animation: fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
