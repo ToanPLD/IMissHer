@@ -6,10 +6,11 @@ uniform float uRingOuter;
 uniform float uTime;
 
 varying vec3 vWorldPosition;
+varying vec3 vLocalPosition;
 varying vec2 vUv;
 
-// Procedural high-frequency ring density profile with micro-divisions
-float getRingDensity(float r) {
+// Procedural high-frequency ring density profile with Keplerian differential streaming
+float getRingDensity(float r, float streamPhase) {
   float t = (r - uRingInner) / (uRingOuter - uRingInner);
   if (t < 0.0 || t > 1.0) return 0.0;
 
@@ -40,9 +41,17 @@ float getRingDensity(float r) {
     baseDensity = smoothstep(0.965, 0.982, t) * (1.0 - smoothstep(0.982, 1.0, t)) * 0.95;
   }
 
-  // Micro-harmonic particulate ripples
-  float microLines = sin(r * 50.0) * 0.12 + sin(r * 130.0) * 0.07 + sin(r * 320.0) * 0.04;
-  return clamp(baseDensity + microLines, 0.0, 1.0);
+  // Keplerian spiral density waves & differential micro-streamers (Kepler's 3rd Law)
+  float differentialWaves = sin(streamPhase * 18.0 + r * 16.0) * 0.045
+                          + sin(streamPhase * 52.0 - r * 34.0) * 0.025
+                          + sin(streamPhase * 110.0 + r * 80.0) * 0.015;
+
+  // Micro-harmonic particulate ripples with Keplerian phase shearing
+  float microLines = sin(r * 50.0 + streamPhase * 2.0) * 0.10
+                   + sin(r * 130.0 - streamPhase * 4.0) * 0.06
+                   + sin(r * 320.0 + streamPhase * 8.0) * 0.03;
+
+  return clamp(baseDensity + microLines + differentialWaves, 0.0, 1.0);
 }
 
 // Particle color based on radius & composition (champagne gold, bronze, copper, silver-white, cold platinum)
@@ -65,13 +74,20 @@ vec3 getRingColor(float t, float density) {
 
 void main() {
   vec3 pos = vWorldPosition;
-  float r = length(pos.xz);
+  // Local ring space coordinates (planar disk)
+  vec3 localPos = vLocalPosition;
+  float r = length(localPos.xz);
 
   if (r < uRingInner || r > uRingOuter) {
     discard;
   }
 
-  float density = getRingDensity(r);
+  // Keplerian Differential Angular Flow: omega(r) = k * r^(-1.5) (Kepler's 3rd Law)
+  float phi = atan(localPos.z, localPos.x);
+  float omega = 3.6 * pow(max(r, 0.1), -1.5);
+  float streamPhase = phi + omega * uTime;
+
+  float density = getRingDensity(r, streamPhase);
   if (density < 0.01) {
     discard;
   }
@@ -102,9 +118,10 @@ void main() {
   float backScatter = pow(max(0.0, -cosPhase), 2.2) * 0.65;
   float scatter = 0.32 + forwardScatter + backScatter;
 
-  // 3. Multi-tone Palette blending
+  // 3. Multi-tone Palette blending & Crystalline Glints
   vec3 ringBaseColor = getRingColor(tRadius, density);
-  vec3 illuminatedColor = ringBaseColor * uSunColor * scatter * planetShadow;
+  float crystallineGlint = pow(max(0.0, sin(streamPhase * 160.0 + r * 45.0)), 12.0) * 0.22;
+  vec3 illuminatedColor = ringBaseColor * uSunColor * (scatter + crystallineGlint) * planetShadow;
 
   // Outer & inner edge soft taper
   float edgeFade = smoothstep(uRingInner, uRingInner + 0.25, r) * (1.0 - smoothstep(uRingOuter - 0.45, uRingOuter, r));

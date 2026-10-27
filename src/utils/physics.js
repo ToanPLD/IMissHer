@@ -71,3 +71,15 @@ export function calculateGravitationalRedshift(r, rs) {
   if (val <= 0.0) return Infinity;
   return 1.0 / Math.sqrt(val);
 }
+
+/**
+ * Calculates Keplerian orbital angular velocity omega = sqrt(mu / r^3) = r^(-1.5) * sqrt(mu)
+ * According to Kepler's Third Law (differential rotation in planetary rings / accretion disks).
+ * @param {number} r - Orbital radius
+ * @param {number} mu - Standard gravitational parameter (G * M)
+ * @returns {number} Angular velocity in rad/s
+ */
+export function calculateKeplerianAngularVelocity(r, mu = 1.0) {
+  if (r <= 0) return 0.0;
+  return Math.sqrt(mu) * Math.pow(r, -1.5);
+}

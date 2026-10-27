@@ -58,7 +58,10 @@ export class CinematicHUD {
               <span>✦</span>
               <span id="audio-label">Âm Nhạc (Phím M)</span>
             </button>
-            <span class="text-[10px] text-slate-500">Phím 1-4: Góc quay | Space: Tự hành</span>
+            <button id="toggle-autopilot-btn" class="hover:text-amber-300 transition-colors flex items-center space-x-1.5">
+              <span id="autopilot-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="autopilot-label">Tự hành: BẬT (Space)</span>
+            </button>
           </div>
         </div>
       </div>
@@ -75,12 +78,20 @@ export class CinematicHUD {
     this.microTrigger = this.container.querySelector('#micro-trigger');
     this.audioBtn = this.container.querySelector('#toggle-audio-btn');
     this.audioLabel = this.container.querySelector('#audio-label');
+    this.autoPilotBtn = this.container.querySelector('#toggle-autopilot-btn');
     this.camBtns = this.container.querySelectorAll('[data-camera]');
 
     // Micro trigger toggle
     this.microTrigger.addEventListener('click', () => {
       this.toggleDrawer();
     });
+
+    // Auto-pilot toggle
+    if (this.autoPilotBtn) {
+      this.autoPilotBtn.addEventListener('click', () => {
+        this.toggleAutoPilot();
+      });
+    }
 
     // Camera preset clicks
     this.camBtns.forEach(btn => {
@@ -100,7 +111,10 @@ export class CinematicHUD {
     window.addEventListener('keydown', async (e) => {
       const key = e.key.toLowerCase();
 
-      if (key === 'h') {
+      if (e.code === 'Space' || key === ' ') {
+        e.preventDefault();
+        this.toggleAutoPilot();
+      } else if (key === 'h') {
         this.toggleDrawer();
       } else if (key === 'm') {
         await this.toggleAudio();
@@ -120,6 +134,21 @@ export class CinematicHUD {
         }
       }
     });
+  }
+
+  toggleAutoPilot() {
+    this.isAutoPilot = this.sceneManager.toggleAutoPilot();
+    const autoPilotLabel = this.container.querySelector('#autopilot-label');
+    const autoPilotDot = this.container.querySelector('#autopilot-dot');
+    if (autoPilotLabel) {
+      autoPilotLabel.textContent = this.isAutoPilot ? "Tự hành: BẬT (Space)" : "Tự hành: TẮT (Space)";
+    }
+    if (autoPilotDot) {
+      autoPilotDot.className = this.isAutoPilot
+        ? "w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"
+        : "w-1.5 h-1.5 rounded-full bg-slate-500";
+    }
+    return this.isAutoPilot;
   }
 
   toggleDrawer() {

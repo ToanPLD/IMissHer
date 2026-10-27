@@ -8,7 +8,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 export const CAMERA_PRESETS = {
   cinematic: {
     name: "Hoàng Kim Vô Tận (Reference View)",
-    position: new THREE.Vector3(-3.2, 3.8, 28.0),
+    position: new THREE.Vector3(-3.2, 3.8, 32.0),
     target: new THREE.Vector3(1.2, 0.2, 0.0),
     fov: 42
   },
@@ -39,7 +39,7 @@ export const CAMERA_PRESETS = {
 };
 
 /**
- * Enhanced SceneManager with UnrealBloom Post-Processing and Cinematic Director Cameras
+ * Enhanced SceneManager with Slow Push-in Auto-Pilot, 4K DPR Scaling and Bloom Post-Processing
  */
 export class SceneManager {
   constructor(canvas) {
@@ -47,13 +47,24 @@ export class SceneManager {
     this.updatables = new Set();
     this.isDisposed = false;
 
-    // Camera animation state
+    // Camera animation & transition state
     this.isTransitioning = false;
     this.transitionProgress = 0.0;
     this.camStartPos = new THREE.Vector3();
     this.camEndPos = new THREE.Vector3();
     this.targetStartPos = new THREE.Vector3();
     this.targetEndPos = new THREE.Vector3();
+
+    // Cinematic Auto-Pilot Push-In state
+    this.isAutoPilot = true;
+    this.pushInSpeed = 0.015; // Slow cinematic forward glide
+    this.minPushInDistance = 13.0; // Stop before intersecting planet/rings
+    this.isUserInteracting = false;
+    this.userInteractTimer = null;
+
+    // 4K Dynamic DPR Performance management
+    this.currentDPR = Math.min(window.devicePixelRatio || 1, 1.75);
+    this.lastFrameTime = performance.now();
 
     this.init();
   }
@@ -62,13 +73,13 @@ export class SceneManager {
     // 1. Scene
     this.scene = new THREE.Scene();
 
-    // 2. Camera
+    // 2. Camera (24mm anamorphic equivalent horizontal FOV)
     const width = this.canvas.clientWidth || window.innerWidth;
     const height = this.canvas.clientHeight || window.innerHeight;
     this.camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 3000);
     this.camera.position.copy(CAMERA_PRESETS.cinematic.position);
 
-    // 3. Renderer with ACES Filmic Tone Mapping
+    // 3. Renderer with ACES Filmic Tone Mapping and 4K capability
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: true,
@@ -76,17 +87,30 @@ export class SceneManager {
       alpha: false
     });
     this.renderer.setSize(width, height, false);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    this.renderer.setPixelRatio(this.currentDPR);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.15;
 
-    // 4. OrbitControls
+    // 4. OrbitControls with user-drag detection
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.04;
     this.controls.minDistance = 6.8;
-    this.controls.maxDistance = 120.0;
+    this.controls.maxDistance = 140.0;
     this.controls.target.copy(CAMERA_PRESETS.cinematic.target);
+
+    // Detect user manual interaction
+    this.controls.addEventListener('start', () => {
+      this.isUserInteracting = true;
+      if (this.userInteractTimer) clearTimeout(this.userInteractTimer);
+    });
+
+    this.controls.addEventListener('end', () => {
+      // Resume slow push-in after 3.2s of inactivity
+      this.userInteractTimer = setTimeout(() => {
+        this.isUserInteracting = false;
+      }, 3200);
+    });
 
     // 5. Post-Processing Pipeline (Bloom & Glow)
     this.initPostProcessing(width, height);
@@ -104,7 +128,6 @@ export class SceneManager {
   initPostProcessing(width, height) {
     const renderScene = new RenderPass(this.scene, this.camera);
 
-    // UnrealBloomPass: adds that celestial, ethereal glow to rings, stars, and sun
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(width, height),
       0.75, // Strength
@@ -120,20 +143,21 @@ export class SceneManager {
     this.composer.addPass(outputPass);
   }
 
-  /**
-   * Sets bloom intensity
-   * @param {number} strength in [0.0, 2.5]
-   */
   setBloomStrength(strength) {
     if (this.bloomPass) {
       this.bloomPass.strength = strength;
     }
   }
 
-  /**
-   * Smoothly animates camera to a predefined cinematic preset
-   * @param {string} presetKey
-   */
+  toggleAutoPilot() {
+    this.isAutoPilot = !this.isAutoPilot;
+    return this.isAutoPilot;
+  }
+
+  setAutoPilot(state) {
+    this.isAutoPilot = !!state;
+  }
+
   setCameraPreset(presetKey) {
     const preset = CAMERA_PRESETS[presetKey];
     if (!preset) return;
@@ -173,20 +197,48 @@ export class SceneManager {
   animate() {
     if (this.isDisposed) return;
 
+    const now = performance.now();
+    const frameDelta = now - this.lastFrameTime;
+    this.lastFrameTime = now;
+
+    // 4K Adaptive DPR: scale back if frame time exceeds 18ms (~55 FPS)
+    if (frameDelta > 18.0 && this.currentDPR > 1.1) {
+      this.currentDPR = Math.max(1.0, this.currentDPR - 0.05);
+      this.renderer.setPixelRatio(this.currentDPR);
+    } else if (frameDelta < 14.5 && this.currentDPR < Math.min(window.devicePixelRatio || 1, 1.75)) {
+      this.currentDPR = Math.min(Math.min(window.devicePixelRatio || 1, 1.75), this.currentDPR + 0.02);
+      this.renderer.setPixelRatio(this.currentDPR);
+    }
+
     const delta = this.clock.getDelta();
     const elapsedTime = this.clock.getElapsedTime();
 
-    // Smooth camera transition
+    // 1. Smooth preset transition interpolation
     if (this.isTransitioning) {
       this.transitionProgress += delta * 0.85;
       if (this.transitionProgress >= 1.0) {
         this.transitionProgress = 1.0;
         this.isTransitioning = false;
       }
-      // Cubic smoothstep easing
       const t = 1.0 - Math.pow(1.0 - this.transitionProgress, 3.0);
       this.camera.position.lerpVectors(this.camStartPos, this.camEndPos, t);
       this.controls.target.lerpVectors(this.targetStartPos, this.targetEndPos, t);
+    }
+    // 2. Continuous Cinematic Push-In Auto-Pilot
+    else if (this.isAutoPilot && !this.isUserInteracting) {
+      const toTarget = new THREE.Vector3().subVectors(this.controls.target, this.camera.position);
+      const dist = toTarget.length();
+
+      if (dist > this.minPushInDistance) {
+        // Slow push forward along camera view vector
+        const forward = toTarget.clone().normalize();
+        this.camera.position.addScaledVector(forward, this.pushInSpeed * delta * 60.0);
+        // Subtle vertical breathing drift
+        this.camera.position.y += Math.sin(elapsedTime * 0.25) * 0.0018;
+      } else {
+        // Once within intimate range, transition into infinite gentle orbital orbit
+        this.camera.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.0006 * delta * 60.0);
+      }
     }
 
     this.controls.update();
@@ -197,7 +249,6 @@ export class SceneManager {
       }
     });
 
-    // Render through Post-Processing Composer
     if (this.composer) {
       this.composer.render();
     } else {

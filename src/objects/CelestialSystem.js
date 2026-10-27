@@ -6,10 +6,12 @@ import atmosphereFragShader from '../shaders/atmosphere.frag.glsl?raw';
 const vertexCommon = `
 varying vec3 vNormal;
 varying vec3 vWorldPosition;
+varying vec3 vLocalPosition;
 varying vec2 vUv;
 
 void main() {
   vUv = uv;
+  vLocalPosition = position;
   vNormal = normalize(normalMatrix * normal);
   vec4 worldPos = modelMatrix * vec4(position, 1.0);
   vWorldPosition = worldPos.xyz;
@@ -304,6 +306,7 @@ export class CelestialSystem {
 
   /**
    * Specified: "crystalline fragments and rocky debris catching tiny flashes of light"
+   * Implements individual Keplerian orbital velocity omega(r) = k * r^(-1.5)
    */
   initGlitteringIceParticles() {
     this.iceParticleCount = 2800;
@@ -311,14 +314,25 @@ export class CelestialSystem {
     const positions = new Float32Array(this.iceParticleCount * 3);
     const colors = new Float32Array(this.iceParticleCount * 3);
 
+    this.iceRadii = new Float32Array(this.iceParticleCount);
+    this.iceAngles = new Float32Array(this.iceParticleCount);
+    this.iceSpeeds = new Float32Array(this.iceParticleCount);
+    this.iceYOffsets = new Float32Array(this.iceParticleCount);
+
     const tempColor = new THREE.Color();
     for (let i = 0; i < this.iceParticleCount; i++) {
       // Dispersed in ring plane and near foreground
       const r = this.ringInner + Math.random() * (this.ringOuter - this.ringInner);
       const theta = Math.random() * Math.PI * 2.0;
       const yOffset = (Math.random() - 0.5) * 0.35;
+      // Kepler's Third Law differential angular speed: omega proportional to r^(-1.5)
+      const speed = 2.2 * Math.pow(r, -1.5);
 
-      // Transform into tilted planet coordinate space
+      this.iceRadii[i] = r;
+      this.iceAngles[i] = theta;
+      this.iceSpeeds[i] = speed;
+      this.iceYOffsets[i] = yOffset;
+
       positions[i * 3 + 0] = Math.cos(theta) * r;
       positions[i * 3 + 1] = yOffset;
       positions[i * 3 + 2] = Math.sin(theta) * r;
@@ -371,15 +385,16 @@ export class CelestialSystem {
     ctx.fillRect(0, 0, 128, 128);
 
     const texture = new THREE.CanvasTexture(canvas);
-    const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+    this.sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({
       map: texture,
       blending: THREE.AdditiveBlending,
       color: 0xffeedd,
       transparent: true,
       depthWrite: false
     }));
-    sunSprite.scale.set(42.0, 42.0, 1.0);
-    this.sunGroup.add(sunSprite);
+    this.baseSunScale = 42.0;
+    this.sunSprite.scale.set(this.baseSunScale, this.baseSunScale, 1.0);
+    this.sunGroup.add(this.sunSprite);
 
     // Anamorphic horizontal lens flare streak
     const streakCanvas = document.createElement('canvas');
@@ -393,15 +408,17 @@ export class CelestialSystem {
     sCtx.fillStyle = sGrad;
     sCtx.fillRect(0, 0, 256, 32);
 
-    const streakSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+    this.streakSprite = new THREE.Sprite(new THREE.SpriteMaterial({
       map: new THREE.CanvasTexture(streakCanvas),
       blending: THREE.AdditiveBlending,
       color: 0xffe2b5,
       transparent: true,
       depthWrite: false
     }));
-    streakSprite.scale.set(110.0, 11.0, 1.0);
-    this.sunGroup.add(streakSprite);
+    this.baseStreakScaleX = 110.0;
+    this.baseStreakScaleY = 11.0;
+    this.streakSprite.scale.set(this.baseStreakScaleX, this.baseStreakScaleY, 1.0);
+    this.sunGroup.add(this.streakSprite);
 
     this.group.add(this.sunGroup);
   }
@@ -412,6 +429,8 @@ export class CelestialSystem {
     const positions = new Float32Array(this.starCount * 3);
     const colors = new Float32Array(this.starCount * 3);
     const sizes = new Float32Array(this.starCount);
+    const phases = new Float32Array(this.starCount);
+    const frequencies = new Float32Array(this.starCount);
 
     const palette = [
       new THREE.Color(0xffffff), // Diamond white
@@ -452,18 +471,64 @@ export class CelestialSystem {
       colors[i * 3 + 1] = col.g;
       colors[i * 3 + 2] = col.b;
 
-      sizes[i] = Math.random() < 0.06 ? 3.8 : (1.0 + Math.random() * 2.2);
+      sizes[i] = Math.random() < 0.06 ? 4.2 : (1.2 + Math.random() * 2.4);
+      phases[i] = Math.random() * Math.PI * 2.0;
+      frequencies[i] = 0.8 + Math.random() * 3.6;
     }
 
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+    geo.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+    geo.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
+    geo.setAttribute('aFrequency', new THREE.BufferAttribute(frequencies, 1));
 
-    const starMat = new THREE.PointsMaterial({
-      size: 1.6,
+    const starVertexShader = `
+      attribute float aSize;
+      attribute float aPhase;
+      attribute float aFrequency;
+      varying vec3 vColor;
+      varying float vTwinkle;
+      uniform float uTime;
+
+      void main() {
+        vColor = color;
+        // Multi-frequency starlight scintillation
+        float twinkle = sin(aPhase + uTime * aFrequency) * 0.35
+                      + sin(aPhase * 2.3 + uTime * (aFrequency * 1.7)) * 0.20
+                      + 0.75;
+        vTwinkle = clamp(twinkle, 0.20, 1.40);
+
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = aSize * vTwinkle * (220.0 / -mvPosition.z);
+        gl_PointSize = clamp(gl_PointSize, 1.0, 9.0);
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `;
+
+    const starFragmentShader = `
+      varying vec3 vColor;
+      varying float vTwinkle;
+
+      void main() {
+        vec2 coord = gl_PointCoord - vec2(0.5);
+        float distSq = dot(coord, coord);
+        if (distSq > 0.25) discard;
+
+        float intensity = exp(-distSq * 18.0) * vTwinkle;
+        gl_FragColor = vec4(vColor * (0.85 + 0.5 * vTwinkle), clamp(intensity, 0.0, 1.0));
+      }
+    `;
+
+    this.galaxyUniforms = {
+      uTime: { value: 0.0 }
+    };
+
+    const starMat = new THREE.ShaderMaterial({
+      vertexShader: starVertexShader,
+      fragmentShader: starFragmentShader,
+      uniforms: this.galaxyUniforms,
       vertexColors: true,
       transparent: true,
-      opacity: 0.95,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
@@ -480,8 +545,19 @@ export class CelestialSystem {
     if (this.ringUniforms) {
       this.ringUniforms.uTime.value = elapsedTime;
     }
-    if (this.icePoints) {
-      this.icePoints.rotation.y = elapsedTime * 0.018;
+
+    // Individual Keplerian orbital particle propagation
+    if (this.icePoints && this.iceRadii && this.iceAngles && this.iceSpeeds) {
+      const posAttr = this.icePoints.geometry.attributes.position;
+      const posArray = posAttr.array;
+      for (let i = 0; i < this.iceParticleCount; i++) {
+        this.iceAngles[i] += this.iceSpeeds[i] * delta;
+        const theta = this.iceAngles[i];
+        const r = this.iceRadii[i];
+        posArray[i * 3 + 0] = Math.cos(theta) * r;
+        posArray[i * 3 + 2] = Math.sin(theta) * r;
+      }
+      posAttr.needsUpdate = true;
     }
 
     // Moons
@@ -517,8 +593,56 @@ export class CelestialSystem {
       this.asteroidsMeshB.instanceMatrix.needsUpdate = true;
     }
 
+    // Dynamic Starfield Scintillation
+    if (this.galaxyUniforms) {
+      this.galaxyUniforms.uTime.value = elapsedTime;
+    }
     if (this.galaxyPoints) {
       this.galaxyPoints.rotation.y = elapsedTime * 0.0018;
+    }
+
+    // Analytical Ray-Sphere Solar Occlusion
+    if (this.sunSprite && this.streakSprite && this.camera) {
+      const camPos = this.camera.position;
+      const sunPos = this.sunPosition;
+      const rayDir = new THREE.Vector3().subVectors(sunPos, camPos);
+      const sunDistance = rayDir.length();
+      rayDir.normalize();
+
+      // Planet center is at origin (0, 0, 0)
+      const toCam = camPos.clone().negate();
+      const proj = toCam.dot(rayDir);
+
+      let occlusionFactor = 1.0;
+      if (proj > 0.0 && proj < sunDistance) {
+        const closestPoint = camPos.clone().addScaledVector(rayDir, proj);
+        const distToCenter = closestPoint.length();
+        const R = this.planetRadius;
+        const penumbraWidth = 1.4;
+
+        if (distToCenter <= R - 0.2) {
+          // Fully eclipsed behind planet
+          occlusionFactor = 0.04;
+        } else if (distToCenter < R + penumbraWidth) {
+          // Limb penumbra grazing
+          const t = (distToCenter - (R - 0.2)) / (penumbraWidth + 0.2);
+          occlusionFactor = 0.04 + 0.96 * (t * t * (3.0 - 2.0 * t));
+        }
+      }
+
+      this.sunSprite.scale.set(
+        this.baseSunScale * (0.3 + 0.7 * occlusionFactor),
+        this.baseSunScale * (0.3 + 0.7 * occlusionFactor),
+        1.0
+      );
+      this.sunSprite.material.opacity = 0.85 * occlusionFactor;
+
+      this.streakSprite.scale.set(
+        this.baseStreakScaleX * (0.15 + 0.85 * occlusionFactor),
+        this.baseStreakScaleY * (0.25 + 0.75 * occlusionFactor),
+        1.0
+      );
+      this.streakSprite.material.opacity = 0.95 * occlusionFactor;
     }
   }
 

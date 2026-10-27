@@ -4,7 +4,8 @@ import {
   calculatePhotonSphereRadius,
   calculateISCO,
   calculateDopplerFactor,
-  calculateGravitationalRedshift
+  calculateGravitationalRedshift,
+  calculateKeplerianAngularVelocity
 } from '../src/utils/physics.js';
 
 describe('Astrophysics Relativistic Utilities', () => {
@@ -51,5 +52,23 @@ describe('Astrophysics Relativistic Utilities', () => {
 
     // Clamped inside or at horizon
     expect(calculateGravitationalRedshift(2.0, rs)).toBe(Infinity);
+  });
+
+  it('calculates Keplerian orbital angular velocity according to Kepler 3rd Law (r^-1.5)', () => {
+    // For r = 1, omega = 1.0
+    expect(calculateKeplerianAngularVelocity(1.0, 1.0)).toBeCloseTo(1.0, 4);
+
+    // For r = 4, omega = 4^(-1.5) = 1/8 = 0.125
+    expect(calculateKeplerianAngularVelocity(4.0, 1.0)).toBeCloseTo(0.125, 4);
+
+    // Inner ring (r = 8.4) rotates faster than outer ring (r = 24.8)
+    const omegaInner = calculateKeplerianAngularVelocity(8.4, 4.0);
+    const omegaOuter = calculateKeplerianAngularVelocity(24.8, 4.0);
+    expect(omegaInner).toBeGreaterThan(omegaOuter);
+    expect(omegaInner / omegaOuter).toBeCloseTo(Math.pow(24.8 / 8.4, 1.5), 3);
+
+    // Edge cases
+    expect(calculateKeplerianAngularVelocity(0, 1.0)).toBe(0.0);
+    expect(calculateKeplerianAngularVelocity(-5, 1.0)).toBe(0.0);
   });
 });
