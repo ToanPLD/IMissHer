@@ -1,22 +1,22 @@
 # Tasks
 
-## 1. Shaders & Visual Surface Palette
+## 1. Shaders: Obsidian Surface & Electric-Cyan Rim
 
-- [x] 1.1 Overhaul `src/shaders/planet.frag.glsl` to midnight-navy/obsidian albedo with subsurface cyan luminescence and verify shader compilation in test runner.
-- [x] 1.2 Overhaul `src/shaders/atmosphere.frag.glsl` to render high-exponent electric-cyan Fresnel limb halo with forward scattering and verify no visual clipping.
-- [x] 1.3 Update `src/shaders/ring.frag.glsl` to silver-white, platinum, and pale champagne palette while maintaining Keplerian differential flow.
+- [x] 1.1 Update `src/shaders/planet.frag.glsl` with midnight-navy / obsidian palette (`#020611`), subtle low-contrast cloud bands, and micro-bioluminescent glints.
+- [x] 1.2 Update `src/shaders/atmosphere.frag.glsl` with razor-sharp electric-cyan limb Fresnel and directional backlight scattering.
+- [x] 1.3 Update `src/shaders/ring.frag.glsl` to silvery-platinum icy bands with enhanced Cassini/Encke gaps and forward Mie scattering.
 
-## 2. Celestial Dust River & Starlight Alignment
+## 2. Particles & Celestial Systems
 
-- [x] 2.1 Implement `initGoldenStardustRiver()` in `src/objects/CelestialSystem.js` with 6,000+ illuminated particles in the ring plane and under the lower hemisphere.
-- [x] 2.2 Realign distant star backlighting to upper-right rear in `src/objects/CelestialSystem.js` to graze the planetary limb and cast sharp ring shadows.
+- [x] 2.1 Expand particle buffer in `src/objects/CelestialSystem.js` to 12,000 golden-champagne particles flowing across the ring plane with Keplerian differential velocity.
+- [x] 2.2 Re-position directional light source to upper-right background (`(65.0, 42.0, -70.0)`) for dramatic backlight grazing.
 
-## 3. Cinematic Viewport & Aspect Ratio Framing
+## 3. Viewport & Aspect Ratio Adaptations
 
-- [x] 3.1 Implement aspect ratio presets (21:9 Ultrawide, 16:9 Standard, 9:16 Mobile) and letterbox controls in `src/core/SceneManager.js` and `src/ui/CinematicHUD.js`.
-- [x] 3.2 Add hotkey toggle (`A` key or HUD button) for aspect ratio cycling and verify camera frustum adjustments.
+- [x] 3.1 Implement aspect-ratio presets (21:9 IMAX, 16:9 desktop, 9:16 mobile) and letterbox adjustments in `src/core/SceneManager.js` and `src/ui/CinematicHUD.js`.
+- [x] 3.2 Add aspect-ratio hotkey/toggle and verify camera framing across screen sizes.
 
 ## 4. Verification & Testing
 
-- [x] 4.1 Update `tests/cinematic.test.js` to test aspect ratio configurations and palette parameters, and verify all unit tests pass with `npm test`.
-- [x] 4.2 Run `npm run build` to verify clean production build bundle.
+- [x] 4.1 Update `tests/cinematic.test.js` to assert obsidian-cyan visual constants and particle buffer scale.
+- [x] 4.2 Run test suite (`npm test`) and production build (`npm run build`) to verify zero errors and clean build.

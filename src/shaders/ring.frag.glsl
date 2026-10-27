@@ -54,29 +54,24 @@ float getRingDensity(float r, float streamPhase) {
   return clamp(baseDensity + microLines + differentialWaves, 0.0, 1.0);
 }
 
-// Particle color based on radius & composition (silver-blue, platinum, icy white, pale champagne, subtle amber)
+// Particle color based on radius & composition (delicate silver-blue filaments, luminous platinum, icy white, pale champagne)
 vec3 getRingColor(float t, float density) {
-  vec3 colSilverBlue  = vec3(0.86, 0.92, 0.98); // Delicate silver-blue filaments
-  vec3 colPlatinum    = vec3(0.92, 0.94, 0.96); // Luminous platinum
-  vec3 colIcyWhite    = vec3(0.98, 0.99, 1.00); // Brilliant crystalline icy white
-  vec3 colChampagne   = vec3(0.96, 0.91, 0.82); // Pale champagne gold
-  vec3 colWarmAmber   = vec3(0.86, 0.72, 0.54); // Subtle warm amber resonance
+  vec3 colSilverBlue    = vec3(0.72, 0.82, 0.94); // Delicate silver-blue filaments
+  vec3 colColdPlatinum  = vec3(0.92, 0.95, 0.98); // Luminous cold platinum
+  vec3 colIcyWhite      = vec3(0.98, 0.99, 1.00); // Pure crystalline ice white
+  vec3 colPaleChampagne = vec3(0.98, 0.94, 0.85); // Subtle warm champagne highlight
 
-  if (t < 0.22) {
-    // Inner C & D rings: translucent silver-blue with faint amber dust
-    return mix(colSilverBlue, colWarmAmber, t / 0.22);
-  } else if (t < 0.68) {
-    // Main dense B ring: luminous platinum to brilliant icy white
-    return mix(colPlatinum, colIcyWhite, (t - 0.22) / 0.46);
+  if (t < 0.25) {
+    return mix(colSilverBlue, colColdPlatinum, t / 0.25);
+  } else if (t < 0.65) {
+    return mix(colColdPlatinum, colIcyWhite, (t - 0.25) / 0.40);
   } else if (t < 0.74) {
-    // Cassini division gap: deep cold slate-blue
-    return colSilverBlue * 0.42;
-  } else if (t < 0.95) {
-    // Outer A ring: icy white with champagne gold rim
-    return mix(colIcyWhite, colChampagne, (t - 0.74) / 0.21);
+    // Cassini division edge tint
+    return colSilverBlue * 0.40;
+  } else if (t < 0.92) {
+    return mix(colIcyWhite, colPaleChampagne, (t - 0.74) / 0.18);
   } else {
-    // F ringlet: delicate silver-blue filament
-    return mix(colChampagne, colSilverBlue, (t - 0.95) / 0.05);
+    return mix(colPaleChampagne, colSilverBlue, (t - 0.92) / 0.08);
   }
 }
 
@@ -120,17 +115,16 @@ void main() {
     }
   }
 
-  // 2. Anisotropic Light Scattering on Ring Particles (Forward Mie Scattering)
+  // 2. Anisotropic Light Scattering on Ring Particles (Enhanced Forward Mie Scattering)
   float cosPhase = dot(V, -L);
-  float forwardScatter = pow(max(0.0, cosPhase), 3.2) * 2.9;
-  float backScatter = pow(max(0.0, -cosPhase), 2.2) * 0.65;
-  float scatter = 0.32 + forwardScatter + backScatter;
+  float forwardScatter = pow(max(0.0, cosPhase), 3.6) * 3.6;
+  float backScatter = pow(max(0.0, -cosPhase), 2.4) * 0.75;
+  float scatter = 0.28 + forwardScatter + backScatter;
 
-  // 3. Multi-tone Palette blending & Golden Crystalline Sparks
+  // 3. Multi-tone Palette blending & Crystalline Glints
   vec3 ringBaseColor = getRingColor(tRadius, density);
-  float crystallineGlint = pow(max(0.0, sin(streamPhase * 160.0 + r * 45.0)), 12.0) * 0.28;
-  vec3 goldenSpark = vec3(1.0, 0.92, 0.74) * crystallineGlint;
-  vec3 illuminatedColor = (ringBaseColor * uSunColor * scatter + goldenSpark) * planetShadow;
+  float crystallineGlint = pow(max(0.0, sin(streamPhase * 160.0 + r * 45.0)), 12.0) * 0.22;
+  vec3 illuminatedColor = ringBaseColor * uSunColor * (scatter + crystallineGlint) * planetShadow;
 
   // Outer & inner edge soft taper
   float edgeFade = smoothstep(uRingInner, uRingInner + 0.25, r) * (1.0 - smoothstep(uRingOuter - 0.45, uRingOuter, r));

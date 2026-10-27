@@ -1,58 +1,42 @@
-# Spec Delta: Obsidian & Electric-Cyan Vista
+# Spec Delta: Obsidian Cyan Vista
 
 ## Purpose
 
-Provides a photorealistic, high-contrast IMAX deep-space aesthetic featuring a colossal obsidian gas giant, electric-cyan backlit atmospheric limb, silver-platinum Keplerian rings, and a flowing golden stardust stream.
+Provides real-time photorealistic rendering of an obsidian-cyan colossal gas giant with electric-cyan rim scattering, silvery-platinum rings, and a dense river of Keplerian golden stardust across 21:9, 16:9, and 9:16 viewports.
 
 ## ADDED Requirements
 
-### Requirement: Obsidian Midnight Planet Rendering
-The system SHALL render the primary celestial gas giant with deep midnight-navy surface shading, subtle swirling cloud bands, faint subsurface blue luminescence, and physical shadow terminator falloff into near-absolute darkness.
+### Requirement: Obsidian Gas Giant Surface Rendering
+The system SHALL render the primary planet surface in deep midnight-navy and obsidian black tones with low-contrast atmospheric banding and faint bioluminescent surface accents.
 
-#### Scenario: Dark side terminator falloff
-- **WHEN** observing the unilluminated hemisphere of the planet
-- **THEN** surface tones roll off smoothly into deep obsidian black while retaining subtle midnight-blue cloud contours.
+#### Scenario: Deep shadow surface shading
+- **WHEN** the primary planet is rendered under backlight illumination
+- **THEN** the unlit planetary hemisphere maintains rich obsidian-blue darks without becoming flat black or washing out subtle surface cloud structures.
 
-#### Scenario: Subsurface luminescence illumination
-- **WHEN** starlight grazes the upper planetary hemisphere
-- **THEN** faint deep-blue bioluminescent glow traces become discernible beneath atmospheric storm vortices.
+### Requirement: Electric-Cyan Atmospheric Rim Backlight
+The system SHALL render a thin, razor-sharp electric-cyan atmospheric limb along the upper-right planetary curvature driven by directional backlight scattering.
 
-### Requirement: Electric-Cyan Atmospheric Rim Glow
-The atmospheric limb shader SHALL render a razor-sharp electric-cyan halo outlining the illuminated edge with exponential Fresnel falloff and forward starlight Mie scattering.
+#### Scenario: Limb Fresnel grazing glow
+- **WHEN** starlight grazes the upper-right horizon of the planet
+- **THEN** an intense electric-cyan rim glow is generated with rapid exponential falloff, separating the planetary silhouette cleanly from the black cosmos.
 
-#### Scenario: Backlit rim grazing
-- **WHEN** light from the distant star grazes the planetary curvature
-- **THEN** a brilliant cyan-to-white luminous rim outlines the upper-right edge of the silhouette without flat artificial outlines.
+### Requirement: Silvery-Platinum Ring Re-Grading
+The planetary ring shader SHALL render concentric grooved bands with cold platinum, icy white, and silver-blue tones alongside distinct Cassini and Encke divisions.
 
-#### Scenario: Limb electric-blue halo
-- **WHEN** viewed against deep space
-- **THEN** an ethereal blue-white atmospheric halo smoothly separates the planetary disc from the starry cosmic backdrop.
+#### Scenario: Concentric ring band striation
+- **WHEN** the camera views the illuminated sections of the planetary rings
+- **THEN** the rings exhibit high forward Mie scattering, crisp dark division gaps, and alternating silver-platinum reflectance.
 
-### Requirement: Silver-Platinum Concentric Planetary Rings
-The planetary ring shader SHALL render concentric particulate bands featuring silver-white, platinum, and cold-ice tones with pale champagne highlights, modulated by Keplerian differential streaming.
+### Requirement: Dense Golden Cosmic Dust River
+The system SHALL render a dense stream of 12,000 or more golden-champagne particles orbiting with Keplerian differential velocity and flowing across the ring plane in front of the dark hemisphere.
 
-#### Scenario: Ring tonal variation and gaps
-- **WHEN** viewing the ring system across its radial span
-- **THEN** translucent silver filaments, dense platinum bands, Cassini divisions, and fine Encke gaps render with high-frequency particulate detail.
+#### Scenario: Golden stardust river flow
+- **WHEN** frames are rendered over time
+- **THEN** the golden particle stream flows smoothly along the equatorial plane in front of the dark planet with radial angular velocity inversely proportional to the 1.5 power of orbital distance.
 
-#### Scenario: Shadow casting across planet
-- **WHEN** the ring plane intersects the illuminated planetary hemisphere
-- **THEN** sharp, physically accurate planetary shadows project across the ring surface and onto the planet disc.
+### Requirement: Aspect Ratio Viewport Adaptations
+The system SHALL provide responsive camera framing and letterbox adaptations for 21:9 ultrawide, 16:9 widescreen, and 9:16 mobile portrait aspect ratios.
 
-### Requirement: Flowing Golden Cosmic Stardust Stream
-The celestial particle engine SHALL simulate an illuminated stream of over 5,000 golden-white cosmic dust particles drifting along the ring plane and under the shadowed lower hemisphere.
-
-#### Scenario: Zero-gravity particle drift
-- **WHEN** the simulation advances in time
-- **THEN** golden-white particles drift along Keplerian trajectories with subtle individual twinkle and forward volumetric scatter.
-
-#### Scenario: Color temperature contrast
-- **WHEN** observing the entire composition
-- **THEN** the warm golden stardust stream forms a distinct, harmonious color tension against the cold blue-black planet and silver rings.
-
-### Requirement: Multi-Format Cinematic Framing
-The rendering engine and HUD SHALL support selectable cinematic viewport framing modes, specifically 21:9 Ultrawide IMAX, 16:9 Standard, and 9:16 Mobile Portrait.
-
-#### Scenario: Aspect ratio switching
-- **WHEN** the user selects or triggers an aspect ratio preset
-- **THEN** the camera frustum and letterbox geometry adjust smoothly to preserve central planetary composition and 24mm anamorphic perspective.
+#### Scenario: Multi-device framing consistency
+- **WHEN** the viewport aspect ratio changes or a display preset is selected
+- **THEN** the camera distance and field of view automatically adjust to preserve the primary planet and ring sweep within the visible frame without distortion.

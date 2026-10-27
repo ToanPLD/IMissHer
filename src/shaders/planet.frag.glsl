@@ -50,24 +50,25 @@ void main() {
   float fineBand = sin(lat * 3.14159 * 2.2 + stormNoise * 1.8 + microSwirl * 0.3) * 0.5 + 0.5;
 
   // Masterpiece Obsidian & Midnight-Navy Color Palette:
-  // Colossal dark gas giant with midnight-blue bands and subsurface cyan luminescence
-  vec3 colObsidian      = vec3(0.008, 0.012, 0.024); // Deep obsidian black base
-  vec3 colMidnightNavy  = vec3(0.018, 0.035, 0.075); // Subtle deep-navy atmospheric band
-  vec3 colSubtleSlate   = vec3(0.038, 0.068, 0.125); // Barely visible swirling cloud structures
-  vec3 colCyanLuminescence = vec3(0.14, 0.68, 1.05); // Delicate electric-cyan luminescence beneath dark clouds
-  vec3 colShadow        = vec3(0.003, 0.005, 0.012); // Deep vacuum shadow
+  // Deep midnight-blue / obsidian black (#020611), subtle dark-navy bands, and micro-bioluminescent specks
+  vec3 colObsidian   = vec3(0.008, 0.024, 0.067); // #020611 base obsidian
+  vec3 colDeepNavy   = vec3(0.016, 0.042, 0.105); // Subtle midnight-navy atmospheric band
+  vec3 colDarkTeal   = vec3(0.022, 0.065, 0.135); // Delicate deep-ocean blue luminescence
+  vec3 colGlintCyan  = vec3(0.10, 0.65, 1.0);    // Electric-blue bioluminescent storm nodes
 
-  vec3 surfaceColor = mix(colObsidian, colMidnightNavy, fineBand);
-  surfaceColor = mix(surfaceColor, colSubtleSlate, smoothstep(0.58, 0.90, stormNoise) * 0.65);
+  // Subtle low-contrast atmospheric structure
+  vec3 surfaceColor = mix(colObsidian, colDeepNavy, fineBand * 0.40);
+  surfaceColor = mix(surfaceColor, colDarkTeal, stormNoise * 0.30);
 
-  // Subsurface electric-cyan bioluminescent luminescence beneath storm rifts
-  float luminescenceMask = pow(smoothstep(0.68, 0.94, stormNoise * (1.0 - fineBand * 0.35)), 2.8);
-  vec3 subsurfaceGlow = colCyanLuminescence * luminescenceMask * 0.60;
-  surfaceColor += subsurfaceGlow;
+  // Micro-bioluminescent surface luminescence (subtle cyan/electric-blue clusters on dark hemisphere)
+  float glintHash = hash(floor(vUv * vec2(380.0, 190.0)));
+  float glintMask = step(0.9982, glintHash);
+  float glintPulse = sin(uTime * 1.8 + glintHash * 40.0) * 0.5 + 0.5;
+  vec3 bioluminescence = colGlintCyan * glintMask * glintPulse * 3.2;
 
-  // 2. Direct Sunlight (Diffuse with sharp physical terminator)
+  // 2. Direct Sunlight (Diffuse with soft penumbra)
   float NdotL = dot(N, L);
-  float diff = smoothstep(-0.04, 0.30, NdotL);
+  float diff = smoothstep(-0.15, 0.22, NdotL);
 
   // 3. Ring Shadow Projection onto Planet
   float ringShadow = 1.0;
@@ -78,7 +79,7 @@ void main() {
       float rRing = length(ringHit.xz);
       if (rRing >= uRingInner && rRing <= uRingOuter) {
         float gapHarmonics = sin(rRing * 14.0) * 0.5 + 0.5;
-        ringShadow = mix(0.04, 0.35, gapHarmonics);
+        ringShadow = mix(0.08, 0.40, gapHarmonics);
       }
     }
   }
@@ -86,18 +87,18 @@ void main() {
   // 4. Nightside Soft Ringshine & Midnight-Navy Ambient
   float nightside = smoothstep(0.05, -0.45, NdotL);
   float ringshineAngle = abs(N.y);
-  vec3 ringshineColor = vec3(0.12, 0.20, 0.35) * ringshineAngle * 0.40 * nightside;
-  vec3 midnightBlueShadow = colShadow * (1.0 - diff);
+  vec3 ringshineColor = vec3(0.08, 0.16, 0.28) * ringshineAngle * 0.40 * nightside;
+  vec3 obsidianShadow = colObsidian * (1.0 - diff);
 
   // 5. Atmospheric Rayleigh Scattering & Electric-Cyan Rim Grazing
   float fresnel = 1.0 - max(0.0, dot(N, V));
-  float rim = pow(fresnel, 4.2);
-  float forwardScatter = pow(max(0.0, dot(V, -L)), 2.8) * 1.10 + max(0.0, NdotL) * 0.45;
-  vec3 atmosphereGlow = vec3(0.18, 0.82, 1.25) * rim * forwardScatter * 3.8;
+  float rim = pow(fresnel, 4.6);
+  float forwardScatter = pow(max(0.0, dot(V, -L)), 3.0) * 1.6 + max(0.0, NdotL) * 0.45;
+  vec3 atmosphereGlow = vec3(0.05, 0.82, 1.0) * rim * forwardScatter * 3.8;
 
   // 6. Combine Cinematic Illumination
   vec3 litSurface = surfaceColor * uSunColor * diff * ringShadow;
-  vec3 finalColor = litSurface + ringshineColor + midnightBlueShadow + atmosphereGlow;
+  vec3 finalColor = litSurface + ringshineColor + obsidianShadow + atmosphereGlow + bioluminescence;
 
   gl_FragColor = vec4(finalColor, 1.0);
 }

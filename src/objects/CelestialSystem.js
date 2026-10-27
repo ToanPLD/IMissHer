@@ -35,10 +35,10 @@ export class CelestialSystem {
     this.group = new THREE.Group();
     this.group.name = "CelestialSystem";
 
-    // Sun light configuration (Grazing upper-right rear limb as in Hollywood IMAX cinematography)
-    this.sunPosition = new THREE.Vector3(72.0, 36.0, -85.0);
+    // Sun light configuration (Top-Right Backlight for dramatic horizon grazing)
+    this.sunPosition = new THREE.Vector3(65.0, 42.0, -70.0);
     this.sunDirection = this.sunPosition.clone().normalize();
-    this.sunColor = new THREE.Vector3(0.96, 0.98, 1.05); // Brilliant electric blue-white starlight
+    this.sunColor = new THREE.Vector3(1.0, 0.94, 0.82); // Warm Champagne Sunlight
 
     // Planet & Ring dimensional parameters
     this.planetRadius = 6.2;
@@ -53,7 +53,6 @@ export class CelestialSystem {
     this.initCompanionMoons();
     this.initForegroundAsteroids();
     this.initGlitteringIceParticles();
-    this.initGoldenStardustRiver();
     this.initSunAndFlares();
     this.initGalacticCore();
 
@@ -89,11 +88,11 @@ export class CelestialSystem {
     this.planetMesh = new THREE.Mesh(planetGeo, this.planetMat);
     this.planetGroup.add(this.planetMesh);
 
-    // 2. Atmosphere Glow Rim (Brilliant Electric-Cyan Halo)
+    // 2. Atmosphere Glow Rim
     const atmoGeo = new THREE.SphereGeometry(this.planetRadius * 1.028, 96, 96);
     this.atmoUniforms = {
       uSunDirection: { value: this.sunDirection },
-      uAtmosphereColor: { value: new THREE.Vector3(0.18, 0.82, 1.25) },
+      uAtmosphereColor: { value: new THREE.Vector3(0.0, 0.88, 1.0) }, // Electric cyan
       uSunColor: { value: this.sunColor }
     };
     this.atmoMat = new THREE.ShaderMaterial({
@@ -306,11 +305,11 @@ export class CelestialSystem {
   }
 
   /**
-   * Specified: "crystalline fragments and rocky debris catching tiny flashes of light"
+   * Specified: "THE GOLDEN COSMIC DUST — immense field of 12,000+ golden-white stardust particles"
    * Implements individual Keplerian orbital velocity omega(r) = k * r^(-1.5)
    */
   initGlitteringIceParticles() {
-    this.iceParticleCount = 2800;
+    this.iceParticleCount = 12000;
     const geo = new THREE.BufferGeometry();
     const positions = new Float32Array(this.iceParticleCount * 3);
     const colors = new Float32Array(this.iceParticleCount * 3);
@@ -322,12 +321,15 @@ export class CelestialSystem {
 
     const tempColor = new THREE.Color();
     for (let i = 0; i < this.iceParticleCount; i++) {
-      // Dispersed in ring plane and near foreground
-      const r = this.ringInner + Math.random() * (this.ringOuter - this.ringInner);
+      // Dispersed across the ring plane with natural clustering
+      const rRatio = Math.pow(Math.random(), 0.85); // slight bias towards inner/mid rings
+      const r = this.ringInner + rRatio * (this.ringOuter - this.ringInner);
       const theta = Math.random() * Math.PI * 2.0;
-      const yOffset = (Math.random() - 0.5) * 0.35;
+      // Soft vertical volumetric dispersion along the equatorial plane
+      const yOffset = (Math.random() - 0.5) * (0.22 + (r - this.ringInner) * 0.015);
+
       // Kepler's Third Law differential angular speed: omega proportional to r^(-1.5)
-      const speed = 2.2 * Math.pow(r, -1.5);
+      const speed = 2.4 * Math.pow(r, -1.5);
 
       this.iceRadii[i] = r;
       this.iceAngles[i] = theta;
@@ -338,8 +340,18 @@ export class CelestialSystem {
       positions[i * 3 + 1] = yOffset;
       positions[i * 3 + 2] = Math.sin(theta) * r;
 
-      // Sparkling colors: diamond white to warm champagne
-      tempColor.setHSL(0.12 + Math.random() * 0.08, 0.75, 0.85);
+      // Palette: Golden-champagne, warm amber, and occasional diamond-silver sparkles
+      if (Math.random() < 0.15) {
+        // Cold diamond / silver sparkle
+        tempColor.setHSL(0.55, 0.20, 0.95);
+      } else if (Math.random() < 0.45) {
+        // Luminous champagne gold
+        tempColor.setHSL(0.12, 0.90, 0.82);
+      } else {
+        // Warm rich golden amber
+        tempColor.setHSL(0.10 + Math.random() * 0.03, 0.96, 0.68 + Math.random() * 0.20);
+      }
+
       colors[i * 3 + 0] = tempColor.r;
       colors[i * 3 + 1] = tempColor.g;
       colors[i * 3 + 2] = tempColor.b;
@@ -349,132 +361,16 @@ export class CelestialSystem {
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     const mat = new THREE.PointsMaterial({
-      size: 0.18,
+      size: 0.15,
       vertexColors: true,
       blending: THREE.AdditiveBlending,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.90,
       depthWrite: false
     });
 
     this.icePoints = new THREE.Points(geo, mat);
     this.planetGroup.add(this.icePoints);
-  }
-
-  /**
-   * Specified: "Beneath and around the planetary rings, an enormous cloud of illuminated
-   * cosmic particles forms a spectacular field of golden-white stardust in zero gravity."
-   */
-  initGoldenStardustRiver() {
-    this.stardustCount = 6800;
-    const geo = new THREE.BufferGeometry();
-    const positions = new Float32Array(this.stardustCount * 3);
-    const colors = new Float32Array(this.stardustCount * 3);
-    const sizes = new Float32Array(this.stardustCount);
-    const phases = new Float32Array(this.stardustCount);
-
-    this.stardustRadii = new Float32Array(this.stardustCount);
-    this.stardustAngles = new Float32Array(this.stardustCount);
-    this.stardustSpeeds = new Float32Array(this.stardustCount);
-    this.stardustBaseY = new Float32Array(this.stardustCount);
-
-    const warmPalette = [
-      new THREE.Color(0xffeedd), // Champagne diamond
-      new THREE.Color(0xffd588), // Radiant warm gold
-      new THREE.Color(0xffbe66), // Deep amber gold
-      new THREE.Color(0xfff8ea), // Silver-white spark
-      new THREE.Color(0xf5cca0)  // Peach gold
-    ];
-
-    for (let i = 0; i < this.stardustCount; i++) {
-      // Stratified: denser near inner-to-mid rings and cascading beneath lower hemisphere
-      const isUnderBelly = Math.random() < 0.45;
-      const r = isUnderBelly
-        ? (this.planetRadius * 0.95 + Math.random() * (this.ringOuter - this.planetRadius))
-        : (this.ringInner * 0.88 + Math.random() * (this.ringOuter * 1.25 - this.ringInner * 0.88));
-
-      const theta = Math.random() * Math.PI * 2.0;
-      // Below planet lower hemisphere or dispersed around ring plane
-      const y = isUnderBelly
-        ? (-1.2 - Math.random() * 8.5)
-        : ((Math.random() - 0.5) * 1.8);
-
-      const speed = 1.4 * Math.pow(r, -1.5);
-
-      this.stardustRadii[i] = r;
-      this.stardustAngles[i] = theta;
-      this.stardustSpeeds[i] = speed;
-      this.stardustBaseY[i] = y;
-
-      positions[i * 3 + 0] = Math.cos(theta) * r;
-      positions[i * 3 + 1] = y;
-      positions[i * 3 + 2] = Math.sin(theta) * r;
-
-      const col = warmPalette[Math.floor(Math.random() * warmPalette.length)];
-      colors[i * 3 + 0] = col.r;
-      colors[i * 3 + 1] = col.g;
-      colors[i * 3 + 2] = col.b;
-
-      sizes[i] = Math.random() < 0.08 ? (3.5 + Math.random() * 3.0) : (1.1 + Math.random() * 2.2);
-      phases[i] = Math.random() * Math.PI * 2.0;
-    }
-
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    geo.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
-    geo.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
-
-    const stardustVertexShader = `
-      attribute float aSize;
-      attribute float aPhase;
-      varying vec3 vColor;
-      varying float vGlow;
-      uniform float uTime;
-
-      void main() {
-        vColor = color;
-        // Subtle twinkling & volumetric shimmer
-        float twinkle = sin(aPhase + uTime * 1.8) * 0.35 + 0.75;
-        vGlow = twinkle;
-
-        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-        gl_PointSize = aSize * twinkle * (240.0 / -mvPosition.z);
-        gl_PointSize = clamp(gl_PointSize, 1.0, 10.0);
-        gl_Position = projectionMatrix * mvPosition;
-      }
-    `;
-
-    const stardustFragmentShader = `
-      varying vec3 vColor;
-      varying float vGlow;
-
-      void main() {
-        vec2 coord = gl_PointCoord - vec2(0.5);
-        float distSq = dot(coord, coord);
-        if (distSq > 0.25) discard;
-
-        // Soft gaussian glowing stardust core
-        float alpha = exp(-distSq * 15.0) * vGlow;
-        gl_FragColor = vec4(vColor * 1.25, clamp(alpha * 0.95, 0.0, 1.0));
-      }
-    `;
-
-    this.stardustUniforms = {
-      uTime: { value: 0.0 }
-    };
-
-    const mat = new THREE.ShaderMaterial({
-      vertexShader: stardustVertexShader,
-      fragmentShader: stardustFragmentShader,
-      uniforms: this.stardustUniforms,
-      vertexColors: true,
-      blending: THREE.AdditiveBlending,
-      transparent: true,
-      depthWrite: false
-    });
-
-    this.stardustPoints = new THREE.Points(geo, mat);
-    this.planetGroup.add(this.stardustPoints);
   }
 
   initSunAndFlares() {
@@ -675,24 +571,6 @@ export class CelestialSystem {
         posArray[i * 3 + 2] = Math.sin(theta) * r;
       }
       posAttr.needsUpdate = true;
-    }
-
-    // Golden Stardust River Keplerian orbital drift & zero-gravity vertical flow
-    if (this.stardustPoints && this.stardustRadii) {
-      if (this.stardustUniforms) {
-        this.stardustUniforms.uTime.value = elapsedTime;
-      }
-      const sPosAttr = this.stardustPoints.geometry.attributes.position;
-      const sPosArr = sPosAttr.array;
-      for (let i = 0; i < this.stardustCount; i++) {
-        this.stardustAngles[i] += this.stardustSpeeds[i] * delta;
-        const theta = this.stardustAngles[i];
-        const r = this.stardustRadii[i];
-        sPosArr[i * 3 + 0] = Math.cos(theta) * r;
-        sPosArr[i * 3 + 1] = this.stardustBaseY[i] + Math.sin(elapsedTime * 0.45 + this.stardustAngles[i]) * 0.22;
-        sPosArr[i * 3 + 2] = Math.sin(theta) * r;
-      }
-      sPosAttr.needsUpdate = true;
     }
 
     // Moons

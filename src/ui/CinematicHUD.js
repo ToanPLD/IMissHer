@@ -29,11 +29,9 @@ export class CinematicHUD {
 
   render() {
     this.container.innerHTML = `
-      <!-- Anamorphic Letterbox & Pillarbox Framing -->
+      <!-- Anamorphic Letterbox Bars (Permanent 2.39:1 Cinema Ratio) -->
       <div id="letterbox-top" class="fixed top-0 left-0 right-0 h-10 md:h-14 bg-black z-40 pointer-events-none transition-all duration-700"></div>
       <div id="letterbox-bottom" class="fixed bottom-0 left-0 right-0 h-10 md:h-14 bg-black z-40 pointer-events-none transition-all duration-700"></div>
-      <div id="pillarbox-left" class="fixed top-0 bottom-0 left-0 w-0 bg-black z-40 pointer-events-none transition-all duration-700"></div>
-      <div id="pillarbox-right" class="fixed top-0 bottom-0 right-0 w-0 bg-black z-40 pointer-events-none transition-all duration-700"></div>
 
       <!-- Ultra-Minimal, Hidden-by-Default Floating Control Drawer -->
       <div id="hud-drawer" class="fixed bottom-16 right-6 z-50 pointer-events-none opacity-0 transition-all duration-500 transform translate-y-3">
@@ -54,15 +52,26 @@ export class CinematicHUD {
             </button>
           </div>
 
+          <!-- Aspect Ratio Presets (21:9 IMAX, 16:9 Desktop, 9:16 Mobile) -->
+          <div class="flex items-center space-x-1.5 pt-1 border-t border-white/10 text-[10px] font-mono">
+            <span class="text-slate-400 mr-1">Tỷ lệ:</span>
+            <button data-aspect="imax" class="px-2 py-1 rounded bg-cyan-500/25 text-cyan-200 border border-cyan-400/40 hover:bg-cyan-500/35 transition-all">
+              21:9 IMAX
+            </button>
+            <button data-aspect="desktop" class="px-2 py-1 rounded bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 transition-all">
+              16:9 PC
+            </button>
+            <button data-aspect="mobile" class="px-2 py-1 rounded bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 transition-all">
+              9:16 Phone
+            </button>
+            <span class="text-slate-500 text-[9px] ml-auto">Phím A</span>
+          </div>
+
           <!-- Controls row -->
-          <div class="flex items-center justify-between pt-1 border-t border-white/10 text-[11px] font-mono text-slate-400 space-x-2">
+          <div class="flex items-center justify-between pt-1 border-t border-white/10 text-[11px] font-mono text-slate-400">
             <button id="toggle-audio-btn" class="hover:text-amber-300 transition-colors flex items-center space-x-1">
               <span>✦</span>
-              <span id="audio-label">Nhạc (M)</span>
-            </button>
-            <button id="toggle-aspect-btn" class="hover:text-amber-300 transition-colors flex items-center space-x-1">
-              <span>⧉</span>
-              <span id="aspect-label">21:9 IMAX (A)</span>
+              <span id="audio-label">Âm Nhạc (Phím M)</span>
             </button>
             <button id="toggle-autopilot-btn" class="hover:text-amber-300 transition-colors flex items-center space-x-1.5">
               <span id="autopilot-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -85,14 +94,10 @@ export class CinematicHUD {
     this.audioBtn = this.container.querySelector('#toggle-audio-btn');
     this.audioLabel = this.container.querySelector('#audio-label');
     this.autoPilotBtn = this.container.querySelector('#toggle-autopilot-btn');
-    this.aspectBtn = this.container.querySelector('#toggle-aspect-btn');
-    this.aspectLabel = this.container.querySelector('#aspect-label');
     this.camBtns = this.container.querySelectorAll('[data-camera]');
-
+    this.aspectBtns = this.container.querySelectorAll('[data-aspect]');
     this.letterboxTop = this.container.querySelector('#letterbox-top');
     this.letterboxBottom = this.container.querySelector('#letterbox-bottom');
-    this.pillarboxLeft = this.container.querySelector('#pillarbox-left');
-    this.pillarboxRight = this.container.querySelector('#pillarbox-right');
 
     // Micro trigger toggle
     this.microTrigger.addEventListener('click', () => {
@@ -106,18 +111,19 @@ export class CinematicHUD {
       });
     }
 
-    // Aspect ratio toggle
-    if (this.aspectBtn) {
-      this.aspectBtn.addEventListener('click', () => {
-        this.cycleAspectRatio();
-      });
-    }
-
     // Camera preset clicks
     this.camBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         const key = btn.getAttribute('data-camera');
         this.selectCamera(key);
+      });
+    });
+
+    // Aspect ratio clicks
+    this.aspectBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.getAttribute('data-aspect');
+        this.selectAspectRatio(key);
       });
     });
 
@@ -158,6 +164,42 @@ export class CinematicHUD {
     });
   }
 
+  selectAspectRatio(key) {
+    const preset = this.sceneManager.setAspectRatioPreset(key);
+    if (!preset) return;
+
+    this.aspectBtns.forEach(btn => {
+      const bKey = btn.getAttribute('data-aspect');
+      if (bKey === key) {
+        btn.className = 'px-2 py-1 rounded bg-cyan-500/25 text-cyan-200 border border-cyan-400/40 shadow-sm';
+      } else {
+        btn.className = 'px-2 py-1 rounded bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 transition-all';
+      }
+    });
+
+    if (this.letterboxTop && this.letterboxBottom) {
+      const allHeightClasses = ['h-0', 'h-3', 'h-4', 'h-5', 'h-6', 'h-10', 'h-12', 'h-14', 'h-16', 'md:h-5', 'md:h-6', 'md:h-14', 'md:h-16'];
+      this.letterboxTop.classList.remove(...allHeightClasses);
+      this.letterboxBottom.classList.remove(...allHeightClasses);
+
+      if (preset.letterboxClass && preset.letterboxClass !== 'h-0') {
+        const classes = preset.letterboxClass.split(' ');
+        this.letterboxTop.classList.add(...classes);
+        this.letterboxBottom.classList.add(...classes);
+      } else {
+        this.letterboxTop.classList.add('h-0');
+        this.letterboxBottom.classList.add('h-0');
+      }
+    }
+  }
+
+  cycleAspectRatio() {
+    const nextPreset = this.sceneManager.cycleAspectRatio();
+    if (nextPreset) {
+      this.selectAspectRatio(nextPreset.key);
+    }
+  }
+
   toggleAutoPilot() {
     this.isAutoPilot = this.sceneManager.toggleAutoPilot();
     const autoPilotLabel = this.container.querySelector('#autopilot-label');
@@ -171,43 +213,6 @@ export class CinematicHUD {
         : "w-1.5 h-1.5 rounded-full bg-slate-500";
     }
     return this.isAutoPilot;
-  }
-
-  cycleAspectRatio() {
-    const nextKey = this.sceneManager.cycleAspectRatio();
-    this.updateAspectRatioUI(nextKey);
-    return nextKey;
-  }
-
-  updateAspectRatioUI(ratioKey) {
-    if (this.aspectLabel) {
-      if (ratioKey === 'ultrawide') {
-        this.aspectLabel.textContent = "21:9 IMAX (A)";
-      } else if (ratioKey === 'standard') {
-        this.aspectLabel.textContent = "16:9 Full (A)";
-      } else if (ratioKey === 'portrait') {
-        this.aspectLabel.textContent = "9:16 Mobile (A)";
-      }
-    }
-
-    if (this.letterboxTop && this.letterboxBottom && this.pillarboxLeft && this.pillarboxRight) {
-      if (ratioKey === 'ultrawide') {
-        this.letterboxTop.className = "fixed top-0 left-0 right-0 h-10 md:h-14 bg-black z-40 pointer-events-none transition-all duration-700";
-        this.letterboxBottom.className = "fixed bottom-0 left-0 right-0 h-10 md:h-14 bg-black z-40 pointer-events-none transition-all duration-700";
-        this.pillarboxLeft.className = "fixed top-0 bottom-0 left-0 w-0 bg-black z-40 pointer-events-none transition-all duration-700";
-        this.pillarboxRight.className = "fixed top-0 bottom-0 right-0 w-0 bg-black z-40 pointer-events-none transition-all duration-700";
-      } else if (ratioKey === 'standard') {
-        this.letterboxTop.className = "fixed top-0 left-0 right-0 h-0 bg-black z-40 pointer-events-none transition-all duration-700";
-        this.letterboxBottom.className = "fixed bottom-0 left-0 right-0 h-0 bg-black z-40 pointer-events-none transition-all duration-700";
-        this.pillarboxLeft.className = "fixed top-0 bottom-0 left-0 w-0 bg-black z-40 pointer-events-none transition-all duration-700";
-        this.pillarboxRight.className = "fixed top-0 bottom-0 right-0 w-0 bg-black z-40 pointer-events-none transition-all duration-700";
-      } else if (ratioKey === 'portrait') {
-        this.letterboxTop.className = "fixed top-0 left-0 right-0 h-0 bg-black z-40 pointer-events-none transition-all duration-700";
-        this.letterboxBottom.className = "fixed bottom-0 left-0 right-0 h-0 bg-black z-40 pointer-events-none transition-all duration-700";
-        this.pillarboxLeft.className = "fixed top-0 bottom-0 left-0 w-[calc(50vw-28vh)] bg-black z-40 pointer-events-none transition-all duration-700";
-        this.pillarboxRight.className = "fixed top-0 bottom-0 right-0 w-[calc(50vw-28vh)] bg-black z-40 pointer-events-none transition-all duration-700";
-      }
-    }
   }
 
   toggleDrawer() {
