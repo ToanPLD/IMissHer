@@ -8,47 +8,59 @@ uniform float uTime;
 varying vec3 vWorldPosition;
 varying vec2 vUv;
 
-// Procedural high-frequency ring density profile
+// Procedural high-frequency ring density profile with micro-divisions
 float getRingDensity(float r) {
-  // Normalize radius in [0, 1] across ring width
   float t = (r - uRingInner) / (uRingOuter - uRingInner);
   if (t < 0.0 || t > 1.0) return 0.0;
 
-  // 1. Major Ring Zones
-  // D Ring (0.00 - 0.12): very faint
-  // C Ring (0.12 - 0.35): semi-translucent crepe ring
-  // B Ring (0.35 - 0.68): densest, brightest, highly reflective
-  // Cassini Division (0.68 - 0.74): dark, clean gap
-  // A Ring (0.74 - 0.95): structured with Encke division around 0.88
-  // F Ring (0.97 - 1.00): thin delicate outer ringlet
-  
+  // Concentric divisions: D Ring, C Ring, B Ring, Cassini Division, A Ring (Encke gap, Keeler gap), F Ring
   float baseDensity = 0.0;
   if (t < 0.12) {
-    baseDensity = smoothstep(0.02, 0.12, t) * 0.25;
+    baseDensity = smoothstep(0.01, 0.12, t) * 0.28;
   } else if (t < 0.35) {
-    baseDensity = mix(0.35, 0.6, (t - 0.12) / 0.23);
+    baseDensity = mix(0.40, 0.65, (t - 0.12) / 0.23);
   } else if (t < 0.68) {
-    baseDensity = mix(0.85, 0.98, (t - 0.35) / 0.33);
+    baseDensity = mix(0.88, 1.00, (t - 0.35) / 0.33);
   } else if (t < 0.74) {
-    // Cassini division
-    baseDensity = 0.04;
+    // Cassini division gap
+    baseDensity = 0.03;
   } else if (t < 0.95) {
     // A ring
-    baseDensity = 0.72;
+    baseDensity = 0.76;
     // Encke division
-    if (t > 0.87 && t < 0.895) {
+    if (t > 0.865 && t < 0.892) {
+      baseDensity = 0.06;
+    }
+    // Keeler gap
+    if (t > 0.932 && t < 0.942) {
       baseDensity = 0.08;
     }
-  } else if (t > 0.97) {
+  } else if (t > 0.965) {
     // F ringlet
-    baseDensity = smoothstep(0.97, 0.985, t) * (1.0 - smoothstep(0.985, 1.0, t)) * 0.9;
+    baseDensity = smoothstep(0.965, 0.982, t) * (1.0 - smoothstep(0.982, 1.0, t)) * 0.95;
   }
 
-  // 2. Add thousands of fine micro-ringlets (harmonics)
-  float microLines = sin(r * 45.0) * 0.12 + sin(r * 110.0) * 0.08 + sin(r * 280.0) * 0.05;
-  float density = clamp(baseDensity + microLines, 0.0, 1.0);
+  // Micro-harmonic particulate ripples
+  float microLines = sin(r * 50.0) * 0.12 + sin(r * 130.0) * 0.07 + sin(r * 320.0) * 0.04;
+  return clamp(baseDensity + microLines, 0.0, 1.0);
+}
 
-  return density;
+// Particle color based on radius & composition (champagne gold, bronze, copper, silver-white, cold platinum)
+vec3 getRingColor(float t, float density) {
+  vec3 colSilverWhite = vec3(0.95, 0.96, 0.98); // Cold platinum / silver-white
+  vec3 colChampagne   = vec3(0.98, 0.92, 0.80); // Champagne gold
+  vec3 colBronze      = vec3(0.82, 0.68, 0.50); // Warm bronze
+  vec3 colCopper      = vec3(0.70, 0.52, 0.36); // Pale copper
+
+  if (t < 0.35) {
+    return mix(colCopper, colBronze, t / 0.35);
+  } else if (t < 0.68) {
+    return mix(colBronze, colChampagne, (t - 0.35) / 0.33);
+  } else if (t < 0.74) {
+    return colCopper * 0.5;
+  } else {
+    return mix(colChampagne, colSilverWhite, (t - 0.74) / 0.26);
+  }
 }
 
 void main() {
@@ -64,14 +76,11 @@ void main() {
     discard;
   }
 
+  float tRadius = (r - uRingInner) / (uRingOuter - uRingInner);
   vec3 L = normalize(uSunDirection);
   vec3 V = normalize(cameraPosition - vWorldPosition);
-  vec3 ringNormal = vec3(0.0, 1.0, 0.0);
 
   // 1. Calculate Planet's Shadow onto the Ring
-  // Ray towards Sun: P(t) = pos + t * L, with t > 0.
-  // Intersection test with sphere of radius uPlanetRadius at origin (0,0,0):
-  // |pos + t*L|^2 = R^2 => t^2 + 2(pos.L)t + (pos.pos - R^2) = 0
   float b = dot(pos, L);
   float c = dot(pos, pos) - (uPlanetRadius * uPlanetRadius);
   float disc = b * b - c;
@@ -80,30 +89,26 @@ void main() {
   if (disc > 0.0) {
     float t0 = -b - sqrt(disc);
     float t1 = -b + sqrt(disc);
-    // If intersection is in direction towards sun (t > 0)
     if (t1 > 0.05 && t0 < 100.0) {
-      // Soft penumbra at the edge of the shadow
       float dCenter = length(pos - dot(pos, L) * L);
       float penumbra = smoothstep(uPlanetRadius - 0.25, uPlanetRadius + 0.15, dCenter);
-      planetShadow = mix(0.02, 1.0, penumbra);
+      planetShadow = mix(0.015, 1.0, penumbra);
     }
   }
 
-  // 2. Anisotropic Light Scattering on Ring Particles
-  // Forward scattering (when looking towards the sun through the rings, cosAngle ~ 1)
-  // makes the icy grains blaze with golden light!
+  // 2. Anisotropic Light Scattering on Ring Particles (Forward Mie Scattering)
   float cosPhase = dot(V, -L);
-  float forwardScatter = pow(max(0.0, cosPhase), 3.5) * 2.8;
-  float backScatter = pow(max(0.0, -cosPhase), 2.0) * 0.6;
-  float scatter = 0.35 + forwardScatter + backScatter;
+  float forwardScatter = pow(max(0.0, cosPhase), 3.2) * 2.9;
+  float backScatter = pow(max(0.0, -cosPhase), 2.2) * 0.65;
+  float scatter = 0.32 + forwardScatter + backScatter;
 
-  // 3. Ring Color Palette: Champagne gold, bright pearl, soft amber ochre
-  vec3 coreColor = mix(vec3(0.78, 0.68, 0.55), vec3(1.0, 0.94, 0.85), density);
-  vec3 illuminatedColor = coreColor * uSunColor * scatter * planetShadow;
+  // 3. Multi-tone Palette blending
+  vec3 ringBaseColor = getRingColor(tRadius, density);
+  vec3 illuminatedColor = ringBaseColor * uSunColor * scatter * planetShadow;
 
-  // Outer edge soft fade
-  float edgeFade = smoothstep(uRingInner, uRingInner + 0.3, r) * (1.0 - smoothstep(uRingOuter - 0.5, uRingOuter, r));
-  float alpha = clamp(density * 1.2 * edgeFade, 0.0, 0.96);
+  // Outer & inner edge soft taper
+  float edgeFade = smoothstep(uRingInner, uRingInner + 0.25, r) * (1.0 - smoothstep(uRingOuter - 0.45, uRingOuter, r));
+  float alpha = clamp(density * 1.25 * edgeFade, 0.0, 0.98);
 
   gl_FragColor = vec4(illuminatedColor, alpha);
 }
