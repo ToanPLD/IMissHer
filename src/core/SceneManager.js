@@ -38,6 +38,27 @@ export const CAMERA_PRESETS = {
   }
 };
 
+export const ASPECT_RATIOS = {
+  ultrawide: {
+    key: 'ultrawide',
+    label: '21:9 IMAX',
+    ratio: 21 / 9,
+    fovMultiplier: 1.0
+  },
+  standard: {
+    key: 'standard',
+    label: '16:9 Cinema',
+    ratio: 16 / 9,
+    fovMultiplier: 1.05
+  },
+  portrait: {
+    key: 'portrait',
+    label: '9:16 Mobile',
+    ratio: 9 / 16,
+    fovMultiplier: 1.40
+  }
+};
+
 /**
  * Enhanced SceneManager with Slow Push-in Auto-Pilot, 4K DPR Scaling and Bloom Post-Processing
  */
@@ -65,6 +86,10 @@ export class SceneManager {
     // 4K Dynamic DPR Performance management
     this.currentDPR = Math.min(window.devicePixelRatio || 1, 1.75);
     this.lastFrameTime = performance.now();
+
+    // Aspect Ratio & Preset state
+    this.currentAspectRatio = 'ultrawide';
+    this.activePresetKey = 'cinematic';
 
     this.init();
   }
@@ -162,6 +187,7 @@ export class SceneManager {
     const preset = CAMERA_PRESETS[presetKey];
     if (!preset) return;
 
+    this.activePresetKey = presetKey;
     this.camStartPos.copy(this.camera.position);
     this.camEndPos.copy(preset.position);
 
@@ -170,6 +196,24 @@ export class SceneManager {
 
     this.transitionProgress = 0.0;
     this.isTransitioning = true;
+  }
+
+  setAspectRatio(ratioKey) {
+    if (!ASPECT_RATIOS[ratioKey]) return this.currentAspectRatio;
+    this.currentAspectRatio = ratioKey;
+    this.onResize();
+    return this.currentAspectRatio;
+  }
+
+  cycleAspectRatio() {
+    const keys = Object.keys(ASPECT_RATIOS);
+    const currentIndex = keys.indexOf(this.currentAspectRatio);
+    const nextKey = keys[(currentIndex + 1) % keys.length];
+    return this.setAspectRatio(nextKey);
+  }
+
+  getAspectRatioInfo() {
+    return ASPECT_RATIOS[this.currentAspectRatio] || ASPECT_RATIOS.ultrawide;
   }
 
   addUpdatable(obj) {
@@ -185,6 +229,9 @@ export class SceneManager {
     const width = this.canvas.clientWidth || window.innerWidth;
     const height = this.canvas.clientHeight || window.innerHeight;
 
+    const baseFov = CAMERA_PRESETS[this.activePresetKey]?.fov || 42;
+    const aspectInfo = this.getAspectRatioInfo();
+    this.camera.fov = baseFov * aspectInfo.fovMultiplier;
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
 

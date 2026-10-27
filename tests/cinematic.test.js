@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CAMERA_PRESETS } from '../src/core/SceneManager.js';
+import { CAMERA_PRESETS, ASPECT_RATIOS } from '../src/core/SceneManager.js';
 import { calculateKeplerianAngularVelocity } from '../src/utils/physics.js';
 
 describe('Cinematic 4K Vista & Celestial Mechanics', () => {
@@ -13,6 +13,19 @@ describe('Cinematic 4K Vista & Celestial Mechanics', () => {
     // Reference cinematic preset must have 24mm equivalent FOV (~42 deg)
     expect(CAMERA_PRESETS.cinematic.fov).toBe(42);
     expect(CAMERA_PRESETS.cinematic.position.z).toBeGreaterThan(20);
+  });
+
+  it('defines valid multi-format aspect ratio configurations', () => {
+    expect(ASPECT_RATIOS).toHaveProperty('ultrawide');
+    expect(ASPECT_RATIOS).toHaveProperty('standard');
+    expect(ASPECT_RATIOS).toHaveProperty('portrait');
+
+    expect(ASPECT_RATIOS.ultrawide.ratio).toBeCloseTo(21 / 9, 2);
+    expect(ASPECT_RATIOS.standard.ratio).toBeCloseTo(16 / 9, 2);
+    expect(ASPECT_RATIOS.portrait.ratio).toBeCloseTo(9 / 16, 2);
+
+    // Portrait mode must expand FOV multiplier to keep planet centered and framed
+    expect(ASPECT_RATIOS.portrait.fovMultiplier).toBeGreaterThan(ASPECT_RATIOS.ultrawide.fovMultiplier);
   });
 
   it('guarantees Keplerian differential flow between inner and outer rings', () => {

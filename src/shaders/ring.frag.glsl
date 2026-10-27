@@ -54,21 +54,29 @@ float getRingDensity(float r, float streamPhase) {
   return clamp(baseDensity + microLines + differentialWaves, 0.0, 1.0);
 }
 
-// Particle color based on radius & composition (champagne gold, bronze, copper, silver-white, cold platinum)
+// Particle color based on radius & composition (silver-blue, platinum, icy white, pale champagne, subtle amber)
 vec3 getRingColor(float t, float density) {
-  vec3 colSilverWhite = vec3(0.95, 0.96, 0.98); // Cold platinum / silver-white
-  vec3 colChampagne   = vec3(0.98, 0.92, 0.80); // Champagne gold
-  vec3 colBronze      = vec3(0.82, 0.68, 0.50); // Warm bronze
-  vec3 colCopper      = vec3(0.70, 0.52, 0.36); // Pale copper
+  vec3 colSilverBlue  = vec3(0.86, 0.92, 0.98); // Delicate silver-blue filaments
+  vec3 colPlatinum    = vec3(0.92, 0.94, 0.96); // Luminous platinum
+  vec3 colIcyWhite    = vec3(0.98, 0.99, 1.00); // Brilliant crystalline icy white
+  vec3 colChampagne   = vec3(0.96, 0.91, 0.82); // Pale champagne gold
+  vec3 colWarmAmber   = vec3(0.86, 0.72, 0.54); // Subtle warm amber resonance
 
-  if (t < 0.35) {
-    return mix(colCopper, colBronze, t / 0.35);
+  if (t < 0.22) {
+    // Inner C & D rings: translucent silver-blue with faint amber dust
+    return mix(colSilverBlue, colWarmAmber, t / 0.22);
   } else if (t < 0.68) {
-    return mix(colBronze, colChampagne, (t - 0.35) / 0.33);
+    // Main dense B ring: luminous platinum to brilliant icy white
+    return mix(colPlatinum, colIcyWhite, (t - 0.22) / 0.46);
   } else if (t < 0.74) {
-    return colCopper * 0.5;
+    // Cassini division gap: deep cold slate-blue
+    return colSilverBlue * 0.42;
+  } else if (t < 0.95) {
+    // Outer A ring: icy white with champagne gold rim
+    return mix(colIcyWhite, colChampagne, (t - 0.74) / 0.21);
   } else {
-    return mix(colChampagne, colSilverWhite, (t - 0.74) / 0.26);
+    // F ringlet: delicate silver-blue filament
+    return mix(colChampagne, colSilverBlue, (t - 0.95) / 0.05);
   }
 }
 
@@ -118,10 +126,11 @@ void main() {
   float backScatter = pow(max(0.0, -cosPhase), 2.2) * 0.65;
   float scatter = 0.32 + forwardScatter + backScatter;
 
-  // 3. Multi-tone Palette blending & Crystalline Glints
+  // 3. Multi-tone Palette blending & Golden Crystalline Sparks
   vec3 ringBaseColor = getRingColor(tRadius, density);
-  float crystallineGlint = pow(max(0.0, sin(streamPhase * 160.0 + r * 45.0)), 12.0) * 0.22;
-  vec3 illuminatedColor = ringBaseColor * uSunColor * (scatter + crystallineGlint) * planetShadow;
+  float crystallineGlint = pow(max(0.0, sin(streamPhase * 160.0 + r * 45.0)), 12.0) * 0.28;
+  vec3 goldenSpark = vec3(1.0, 0.92, 0.74) * crystallineGlint;
+  vec3 illuminatedColor = (ringBaseColor * uSunColor * scatter + goldenSpark) * planetShadow;
 
   // Outer & inner edge soft taper
   float edgeFade = smoothstep(uRingInner, uRingInner + 0.25, r) * (1.0 - smoothstep(uRingOuter - 0.45, uRingOuter, r));
